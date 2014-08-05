@@ -184,7 +184,7 @@ function ProcessTemplates( entityGroup )
 	}
 
 	// For each template in the group, look up the referenced entities and cache off their spawn tables
-	foreach ( tablename, entity in entityGroup.SpawnTables )
+	foreach ( entity in entityGroup.SpawnTables )
 	{
 		if ( entity.SpawnInfo.classname == "point_script_template" )
 		{
@@ -192,10 +192,7 @@ function ProcessTemplates( entityGroup )
 			local template = Entities.FindByName( null, entity.SpawnInfo.targetname )
 			while ( template )
 			{
-				// entity group spawn table targetnames get decorated with each spawn, so make sure the template caches
-				// its table from the "OriginalGroup" which is a copy that's guaranteed to never change
-				local templateSpawnInfo = entityGroupSet.OriginalGroup.SpawnTables[ tablename ].SpawnInfo
-				template.SetGroupSpawnTables( templateSpawnInfo, entityGroupSet )
+				template.SetGroupSpawnTables( entityGroupSet )
 
 				foreach ( spawnKey, targetName in entity.SpawnInfo )
 				{
@@ -506,7 +503,7 @@ function InstanceEntityGroup( entityGroup, positionEnt, groupOrigin, groupAngles
 //=========================================================
 // Generate unique spawn keys for each entity in this template
 //=========================================================
-function InstanceTemplateGroup( templateSpawnInfo, entityGroupSet, allowNameFixup )
+function InstanceTemplateGroup( entityGroupSet, allowNameFixup )
 {
 	if ( allowNameFixup )
 	{
@@ -518,17 +515,21 @@ function InstanceTemplateGroup( templateSpawnInfo, entityGroupSet, allowNameFixu
 	// record the targetnames of entities that need to be instanced
 	local templateTargetnames = {}
 	local spawnTables = entityGroupSet.OriginalGroup.SpawnTables
-
-	smDbgLoud( "Instancing entities for template " + templateSpawnInfo.targetname )
-
-	foreach ( key, value in templateSpawnInfo )
+	foreach ( tableName, entityTable in spawnTables )
 	{
-		if ( key.find( "Template" ) != null )
+		if ( entityTable.SpawnInfo.classname == "point_script_template" )
 		{
-			smDbgLoud( "Found " + key + " : " + value )
-			templateTargetnames[ value ] <- 1
-		}		
-	}	
+			smDbgLoud( "Instancing entities for template " + entityTable.SpawnInfo.targetname )
+			foreach ( key, value in entityTable.SpawnInfo )
+			{
+				if ( key.find( "Template" ) != null )
+				{
+					smDbgLoud( "Found " + key + " : " + value )
+					templateTargetnames[ value ] <- 1
+				}		
+			}
+		}
+	}
 
 	foreach( targetname, val in templateTargetnames )
 	{
@@ -547,10 +548,10 @@ function InstanceTemplateGroup( templateSpawnInfo, entityGroupSet, allowNameFixu
 // Called from c++ when a point_script_template 
 // spawns its entities
 //=========================================================
-function InstanceTemplateSpawnTables( templateSpawnInfo, entityGroupSet, allowNameFixup )
+function InstanceTemplateSpawnTables( template, entityGroupSet, allowNameFixup )
 {
 	CacheSpawnTables( entityGroupSet.OriginalGroup )
-	InstanceTemplateGroup( templateSpawnInfo, entityGroupSet, allowNameFixup )
+	InstanceTemplateGroup( entityGroupSet, allowNameFixup )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
